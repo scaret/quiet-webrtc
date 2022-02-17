@@ -2,7 +2,7 @@
   "name": "quiet-webrtc",
   "version": "1.0.0",
   "description": "a quiet.js fork for webrtc use",
-  "main": "index.js",
+  "main": "dist/Quiet.js",
   "scripts": {
     "dev": "webpack -w",
     "build": "webpack",

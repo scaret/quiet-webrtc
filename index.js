@@ -540,6 +540,10 @@ const startReceiver = async ()=>{
             autoGainControl: false
         }
     })
+    const audioTrack = audioStream.getAudioTracks()[0]
+    console.log("audioTrack", audioTrack)
+    window.audioTrack = audioTrack
+    console.log(audioTrack.getSettings())
     const textDecoder = new TextDecoder()
     Object.keys(profiles).forEach(async (profileName)=>{
         const receiverOptions = {

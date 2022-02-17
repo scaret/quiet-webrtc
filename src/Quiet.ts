@@ -26,7 +26,12 @@ export class Quiet{
     sampleBufferSize = 16384;
 
     constructor(options?: AudioContextOptions) {
-        this.audioCtx = new AudioContext(options)
+        if (window.AudioContext){
+            this.audioCtx = new AudioContext(options)
+        }else{
+            // @ts-ignore
+            this.audioCtx = new webkitAudioContext(options)
+        }
     }
 
     async init(options: QuietInitOptions){
