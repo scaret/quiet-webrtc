@@ -56,3 +56,16 @@ export interface ReceiverOptions {
     onReceiveFail?: (count: number) => void;
     onReceiverStatsUpdate?: (stats: FrameStats[]) => void;
 }
+export interface TransmitterOptionsInput {
+    profileName: string;
+    clampFrame: boolean;
+    onEnqueue?: () => void;
+    onFinish?: () => void;
+}
+export interface TransmitterOptions {
+    profile: QuietProfile;
+    quiet: Quiet;
+    clampFrame: boolean;
+    onEnqueue: () => void;
+    onFinish: () => void;
+}

@@ -1,7 +1,8 @@
-import {QuietInitOptions, QuietProfile, ReceiverOptionsInput} from "./interfaces";
-import {Module} from "./Module"
+import {QuietInitOptions, QuietProfile, ReceiverOptionsInput, TransmitterOptionsInput} from "./interfaces";
 import {Receiver} from "./Receiver";
 import {ab2str} from "./util";
+import {Transmitter} from "./Transmitter";
+import {Module} from "./Module";
 
 // 同一个Quiet对象使用同样的AudioContext和wasm实例
 export class Quiet{
@@ -47,15 +48,41 @@ export class Quiet{
         }
     }
 
+    async transmitter( transmitOptionsInput: TransmitterOptionsInput){
+        const onEnqueue = transmitOptionsInput.onEnqueue || function(){
+            console.log("transmitter.onEnqueue", ...arguments)
+        }
+
+        const onFinish = transmitOptionsInput.onFinish || function(){
+            console.log("transmitter.onFinish", ...arguments)
+        }
+
+        const profile = this.profiles[transmitOptionsInput.profileName];
+        if (!profile){
+            throw new Error(`Cannot find profile [${transmitOptionsInput.profileName}]. Available profileNames: ${Object.keys(this.profiles).join()}`)
+        }
+
+        const transmitterOptions = {
+            profile,
+            quiet: this,
+            clampFrame: transmitOptionsInput.clampFrame,
+
+            onEnqueue,
+            onFinish,
+        }
+        const transimitter = new Transmitter(transmitterOptions)
+        return transimitter;
+    }
+
     async receiver(receiverOptionsInput: ReceiverOptionsInput){
         const audioStream = receiverOptionsInput.audioStream
             || await navigator.mediaDevices.getUserMedia({
-            audio: {
-                echoCancellation: false,
-                noiseSuppression: false,
-                autoGainControl: false
-            }
-        })
+                audio: {
+                    echoCancellation: false,
+                    noiseSuppression: false,
+                    autoGainControl: false
+                }
+            })
         const onReceive = receiverOptionsInput.onReceive || function(arrayBuffer){
             console.log("onReceive", receiverOptionsInput.profileName, ab2str(arrayBuffer))
         }
@@ -83,7 +110,7 @@ export class Quiet{
 let initStatus:"UNINIT"|"INITING"|"INITED" = "UNINIT"
 const runtimeInitCallbacks: any[] = [];
 
-export async function InitRuntime(){
+async function InitRuntime(){
     if (initStatus === "INITED"){
         return
     }
@@ -105,8 +132,4 @@ export async function InitRuntime(){
             }
         }
     })
-}
-
-export {
-    Module
 }

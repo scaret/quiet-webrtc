@@ -3,7 +3,7 @@ const path = require('path')
 module.exports = {
     mode: "production",
     entry: {
-        Quiet: "./src/Quiet.ts"
+        Quiet: "./src/entry.ts"
     },
     output: {
         devtoolNamespace: 'Quiet',

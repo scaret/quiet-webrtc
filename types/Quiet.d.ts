@@ -1,6 +1,6 @@
-import { QuietInitOptions, QuietProfile, ReceiverOptionsInput } from "./interfaces";
-import { Module } from "./Module";
+import { QuietInitOptions, QuietProfile, ReceiverOptionsInput, TransmitterOptionsInput } from "./interfaces";
 import { Receiver } from "./Receiver";
+import { Transmitter } from "./Transmitter";
 export declare class Quiet {
     emscriptenInitialized: boolean;
     inited: boolean;
@@ -17,7 +17,6 @@ export declare class Quiet {
     constructor(options?: AudioContextOptions);
     init(options: QuietInitOptions): Promise<void>;
     resume(): Promise<void>;
+    transmitter(transmitOptionsInput: TransmitterOptionsInput): Promise<Transmitter>;
     receiver(receiverOptionsInput: ReceiverOptionsInput): Promise<Receiver>;
 }
-export declare function InitRuntime(): Promise<unknown>;
-export { Module };

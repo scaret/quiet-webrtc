@@ -1,3 +1,32 @@
+import { QuietProfile, TransmitterOptions } from "./interfaces";
 export declare class Transmitter {
-    sampleBufferSize: number;
+    profileObj: QuietProfile;
+    done: () => void;
+    clampFrame: boolean;
+    opt: string;
+    c_profiles: number[];
+    c_profile: number[];
+    private encoder;
+    private quiet;
+    running: boolean;
+    inited: boolean;
+    private played;
+    private sample_view;
+    private payload;
+    private opts;
+    private samples;
+    private last_emit_times;
+    private num_emit_times;
+    private empties_written;
+    private scriptNode;
+    private mediaStreamDestination;
+    private dummy_osc;
+    private frame_len;
+    private stream;
+    constructor(opts: TransmitterOptions);
+    transmit(buf: ArrayBuffer): void;
+    transmitText(text: string): void;
+    startTransmitter(): void;
+    writebuf(): void;
+    stopTransmitter(): void;
 }
