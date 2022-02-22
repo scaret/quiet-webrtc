@@ -80,8 +80,12 @@ export class Transmitter{
             }
 
             this.played = true;
-
+            // console.error("播放一帧")
             output_l.set(this.sample_view);
+            setTimeout(()=>{
+                //为下一帧播放做准备
+                this.readBuf()
+            }, 0)
         }
 
         // we want a single input because some implementations will not run a node without some kind of source
@@ -111,6 +115,7 @@ export class Transmitter{
         }
         // now do an update. this may or may not write samples
         this.writebuf();
+        this.readBuf();
     }
 
     transmitText(text: string){
@@ -136,6 +141,10 @@ export class Transmitter{
         // fill as much of quiet's transmit queue as possible
         let frame_available = false;
         let frame_written = false;
+        let counts = {
+            send: 0,
+            emit: 0,
+        }
         while(true) {
             const frame = this.payload.shift();
             if (!frame) {
@@ -146,9 +155,14 @@ export class Transmitter{
             if (written === -1) {
                 this.payload.unshift(frame);
                 break;
+            }else{
+                counts.send++
             }
             frame_written = true;
         }
+        // if (counts.send){
+        //     console.error(`编码请求${counts.send}帧`)
+        // }
 
         if (!this.payload.length && frame_written) {
             // we wrote at least one frame and emptied out payload, our local (js) tx queue
@@ -158,14 +172,20 @@ export class Transmitter{
             // memory util without sacrificing throughput as would be the case for waiting
             // for onFinish, which is only called after everything has flushed
             if (this.opts.onEnqueue !== undefined) {
-                window.setTimeout(this.opts.onEnqueue, 0);
+                try{
+                    this.opts.onEnqueue();
+                }catch(e){
+                    console.error(e)
+                }
             }
         }
 
         if (frame_available && !this.running) {
             this.startTransmitter();
         }
+    }
 
+    readBuf(){
         // now set the sample block
         if (!this.played) {
             // the existing sample block has yet to be played
@@ -176,6 +196,9 @@ export class Transmitter{
         const before = Date.now();
         const written = Module.ccall('quiet_encoder_emit', 'number', ['pointer', 'pointer', 'number'], [this.encoder, this.samples, this.quiet.sampleBufferSize]);
         const after = Date.now();
+        // if (written !== -1){
+        //     console.error("编码返回1帧")
+        // }
 
         this.last_emit_times.unshift(after - before);
         if (this.last_emit_times.length > this.num_emit_times) {
@@ -184,8 +207,9 @@ export class Transmitter{
 
         // libquiet notifies us that the payload is finished by
         // returning written < number of samples we asked for
-        if (!frame_available && written === -1) {
+        if (written === -1) {
             if (this.empties_written < 3) {
+                // 没读到数据，但仍坚持播放3帧静音
                 // flush out browser's sound sample buffer before quitting
                 for (let i = 0; i < this.quiet.sampleBufferSize; i++) {
                     this.sample_view[i] = 0;
@@ -193,18 +217,20 @@ export class Transmitter{
                 this.empties_written++;
                 this.played = false;
                 return;
-            }
-            // looks like we are done
-            // user callback
-            if (this.done !== undefined) {
-                this.done();
-            }
-            if (this.running) {
-                this.stopTransmitter();
+            }else if (this.empties_written === 3){
+                // looks like we are done
+                // user callback
+                if (this.done !== undefined) {
+                    this.done();
+                }
+                if (this.running) {
+                    this.stopTransmitter();
+                }
             }
             return;
         }
 
+        //读到数据了
         this.played = false;
         this.empties_written = 0;
 

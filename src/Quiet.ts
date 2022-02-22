@@ -75,14 +75,14 @@ export class Quiet{
     }
 
     async receiver(receiverOptionsInput: ReceiverOptionsInput){
-        const audioStream = receiverOptionsInput.audioStream
-            || await navigator.mediaDevices.getUserMedia({
+        const audioStreams = receiverOptionsInput.audioStreams
+            || [await navigator.mediaDevices.getUserMedia({
                 audio: {
                     echoCancellation: false,
                     noiseSuppression: false,
                     autoGainControl: false
                 }
-            })
+            })]
         const onReceive = receiverOptionsInput.onReceive || function(arrayBuffer){
             console.log("onReceive", receiverOptionsInput.profileName, ab2str(arrayBuffer))
         }
@@ -94,7 +94,7 @@ export class Quiet{
 
         const receiverOptions = {
             profile,
-            audioStream,
+            audioStreams,
             quiet: this,
             onReceive,
 

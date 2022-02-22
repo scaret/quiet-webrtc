@@ -5,8 +5,8 @@ export declare class Receiver {
     c_profile: number[];
     opts: ReceiverOptions;
     opt: ReceiverOptions;
-    audioStream: MediaStream;
-    audioInput: AudioNode;
+    audioStreams: MediaStream[];
+    audioInputs: AudioNode[];
     private quiet;
     inited: boolean;
     private samples;
@@ -20,6 +20,7 @@ export declare class Receiver {
     private idx;
     private decoder;
     constructor(opts: ReceiverOptions);
+    addAudioStream(audioStream: MediaStream): void;
     init(): void;
     readbuf(): void;
     consume(): void;

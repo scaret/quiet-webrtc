@@ -18,7 +18,7 @@ const startReceiver = async ()=>{
     const textDecoder = new TextDecoder()
     Object.keys(profiles).forEach(async (profileName)=>{
         const receiverOptions = {
-            audioStream,
+            audioStreams: [audioStream],
             profileName: profileName,
             onReceive: function(arrayBuffer){
                 console.log("onReceive", profileName, textDecoder.decode(arrayBuffer))

@@ -28,5 +28,6 @@ export declare class Transmitter {
     transmitText(text: string): void;
     startTransmitter(): void;
     writebuf(): void;
+    readBuf(): void;
     stopTransmitter(): void;
 }

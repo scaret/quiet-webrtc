@@ -1,7 +1,6 @@
 const profileName = "audible"
 let quiet
-let transmitter1
-let transmitter2
+let transmitter
 let receiver
 let textDecoder = new TextDecoder()
 let timer
@@ -17,25 +16,21 @@ const startSendRecv = async ()=>{
         profileName: profileName,
         clampFrame: false,
     }
-    transmitter1 = await quiet.transmitter(transmitterOptions)
-    transmitter2 = await quiet.transmitter(transmitterOptions)
+    transmitter = await quiet.transmitter(transmitterOptions)
     const receiverOptions = {
-        audioStreams: [transmitter1.stream, transmitter2.stream],
+        audioStreams: [transmitter.stream],
         profileName: profileName,
         onReceive: function(arrayBuffer){
             const text = textDecoder.decode(arrayBuffer)
-            console.log("收到消息", text)
+            const start = parseInt(text)
+            const now = Date.now()
+            document.getElementById("receiverDelay").innerText = `${now - start}`
         }
     }
     receiver = await quiet.receiver(receiverOptions)
-    document.getElementById("sendTextBtn").disabled = false
-}
-
-function sendText(){
-    const text = document.getElementById("textToSend").value
-    transmitter1.transmitText("" + text)
-}
-
-function sendText2(text){
-    transmitter2.transmitText("" + text)
+    timer = setInterval(()=>{
+        const start = Date.now()
+        transmitter.transmitText("" + start)
+        document.getElementById("senderDelay").innerText = `${Date.now() - start}`
+    }, 1000)
 }

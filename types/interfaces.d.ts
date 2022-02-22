@@ -42,14 +42,14 @@ export interface FrameStats {
     }[];
 }
 export interface ReceiverOptionsInput {
-    audioStream: MediaStream;
+    audioStreams: MediaStream[];
     profileName: string;
     onReceive?: (buf: ArrayBuffer) => void;
     onReceiveFail?: (count: number) => void;
     onReceiverStatsUpdate?: (stats: FrameStats[]) => void;
 }
 export interface ReceiverOptions {
-    audioStream: MediaStream;
+    audioStreams: MediaStream[];
     profile: QuietProfile;
     quiet: Quiet;
     onReceive: (buf: ArrayBuffer) => void;

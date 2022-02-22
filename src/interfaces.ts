@@ -44,7 +44,7 @@ export interface FrameStats{
 }
 
 export interface ReceiverOptionsInput{
-    audioStream: MediaStream;
+    audioStreams: MediaStream[];
     profileName: string;
 
     onReceive?: (buf: ArrayBuffer)=>void;
@@ -53,7 +53,7 @@ export interface ReceiverOptionsInput{
 }
 
 export interface ReceiverOptions{
-    audioStream: MediaStream;
+    audioStreams: MediaStream[];
     profile: QuietProfile;
     quiet: Quiet;
 

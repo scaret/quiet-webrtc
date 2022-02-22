@@ -9,8 +9,8 @@ export class Receiver{
     opts: ReceiverOptions;
     opt: ReceiverOptions;
 
-    audioStream: MediaStream;
-    audioInput: AudioNode;
+    audioStreams: MediaStream[];
+    audioInputs: AudioNode[];
     private quiet: Quiet;
     inited: boolean = false;
     private samples: number = 0;
@@ -36,17 +36,27 @@ export class Receiver{
         // inform quiet about our local sound card's sample rate so that it can resample to its internal sample rate
         this.decoder = Module.ccall('quiet_decoder_create', 'pointer', ['pointer', 'number'], [this.opt, this.quiet.audioCtx.sampleRate]);
 
-        this.audioStream = opts.audioStream
-        this.audioInput = this.quiet.audioCtx.createMediaStreamSource(this.audioStream)
         this.audioDestination = this.quiet.audioCtx.createMediaStreamDestination()
-
         this.scriptProcessor = this.initScriptProcessor()
 
-        this.audioInput.connect(this.scriptProcessor);
+        this.audioStreams = opts.audioStreams
+        this.audioInputs = []
+        this.audioStreams.forEach((audioStream)=>{
+            this.addAudioStream(audioStream)
+        })
         this.scriptProcessor.connect(this.audioDestination)
 
         this.init()
 
+    }
+
+    addAudioStream(audioStream: MediaStream){
+        const audioInput = this.quiet.audioCtx.createMediaStreamSource(audioStream)
+        this.audioInputs.push(audioInput)
+        if (this.audioStreams.indexOf(audioStream) === -1){
+            this.audioStreams.push(audioStream)
+        }
+        audioInput.connect(this.scriptProcessor);
     }
 
     init(){
