@@ -2,8 +2,9 @@ import {QuietProfile, TransmitterOptions} from "./interfaces";
 import {Module} from "./Module";
 import {Quiet} from "./Quiet";
 import {str2ab} from "./util";
+import { EventEmitter } from "eventemitter3";
 
-export class Transmitter{
+export class Transmitter extends EventEmitter{
     profileObj: QuietProfile
     done: ()=>void
     clampFrame: boolean
@@ -18,8 +19,11 @@ export class Transmitter{
     running: boolean = false
 
     inited: boolean = true
-    private played: Boolean = true;
+
     private sample_view: Float32Array;
+    private samplesToPlay:Float32Array[] = [];
+    private emptySample: Float32Array;
+
     private payload: ArrayBuffer[] = [];
     private opts: TransmitterOptions;
     private samples: number = 0;
@@ -31,8 +35,12 @@ export class Transmitter{
     private dummy_osc: OscillatorNode;
     private frame_len: number;
     private stream: MediaStream;
+    //表示scriptNode是否在播放。
+    private playing = false;
+    private paused = false;
 
     constructor(opts: TransmitterOptions) {
+        super()
         this.opts = opts
         this.profileObj = opts.profile
         this.quiet = opts.quiet
@@ -65,27 +73,29 @@ export class Transmitter{
 
         // yes, this is pointer arithmetic, in javascript :)
         this.sample_view = Module.HEAPF32.subarray((this.samples/4), (this.samples/4) + this.quiet.sampleBufferSize);
+        this.emptySample = new Float32Array(this.sample_view.length)
 
         //搬运自startTransmitter
         const onaudioprocess = (e:AudioProcessingEvent) => {
             const output_l = e.outputBuffer.getChannelData(0);
-
-            if (this.played) {
-                // we've already played what's in sample_view, and it hasn't been
-                //   rewritten for whatever reason, so just play out silence
-                for (let i = 0; i < this.quiet.sampleBufferSize; i++) {
-                    output_l[i] = 0;
+            if (this.paused){
+                output_l.set(this.emptySample)
+            }else{
+                const sample = this.samplesToPlay.shift();
+                if (sample){
+                    if (!this.playing){
+                        this.emit('play-started')
+                        this.playing = true
+                    }
+                    output_l.set(sample)
+                }else{
+                    if (this.playing){
+                        this.emit('play-stopped')
+                        this.playing = false
+                    }
+                    output_l.set(this.emptySample)
                 }
-                return;
             }
-
-            this.played = true;
-            // console.error("播放一帧")
-            output_l.set(this.sample_view);
-            setTimeout(()=>{
-                //为下一帧播放做准备
-                this.readBuf()
-            }, 0)
         }
 
         // we want a single input because some implementations will not run a node without some kind of source
@@ -101,11 +111,34 @@ export class Transmitter{
         this.stream = this.mediaStreamDestination.stream
     }
 
+    pause(){
+        //只pause完整的消息
+        this.paused = true
+    }
+
+    resume(){
+        this.paused = false
+    }
+
     // 都是阻塞性同步方法，貌似没必要做async
-    transmit(buf: ArrayBuffer){
+    async transmit(buf: ArrayBuffer){
         //发送完后返回
         if (!this.inited) {
             return;
+        }
+        if (!buf.byteLength){
+            console.error("empty message")
+            return;
+        }
+        while(true){
+            if (!this.paused && this.playing){
+                // 多次transmit混在一起则等待50毫秒
+                await new Promise((resolve)=>{
+                    setTimeout(resolve, 50);
+                })
+            }else{
+                break;
+            }
         }
         // slice up into frames and push the frames to a list
         for (let i = 0; i < buf.byteLength; ) {
@@ -187,59 +220,52 @@ export class Transmitter{
 
     readBuf(){
         // now set the sample block
-        if (!this.played) {
-            // the existing sample block has yet to be played
-            // we are done
-            return;
-        }
 
-        const before = Date.now();
-        const written = Module.ccall('quiet_encoder_emit', 'number', ['pointer', 'pointer', 'number'], [this.encoder, this.samples, this.quiet.sampleBufferSize]);
-        const after = Date.now();
-        // if (written !== -1){
-        //     console.error("编码返回1帧")
-        // }
+        while(true){
+            const before = Date.now();
+            const written = Module.ccall('quiet_encoder_emit', 'number', ['pointer', 'pointer', 'number'], [this.encoder, this.samples, this.quiet.sampleBufferSize]);
+            const after = Date.now();
+            // if (written !== -1){
+            //     console.error("编码返回1帧")
+            // }
 
-        this.last_emit_times.unshift(after - before);
-        if (this.last_emit_times.length > this.num_emit_times) {
-            this.last_emit_times.pop();
-        }
-
-        // libquiet notifies us that the payload is finished by
-        // returning written < number of samples we asked for
-        if (written === -1) {
-            if (this.empties_written < 3) {
-                // 没读到数据，但仍坚持播放3帧静音
-                // flush out browser's sound sample buffer before quitting
-                for (let i = 0; i < this.quiet.sampleBufferSize; i++) {
-                    this.sample_view[i] = 0;
-                }
-                this.empties_written++;
-                this.played = false;
-                return;
-            }else if (this.empties_written === 3){
-                // looks like we are done
-                // user callback
-                if (this.done !== undefined) {
-                    this.done();
-                }
-                if (this.running) {
-                    this.stopTransmitter();
-                }
+            this.last_emit_times.unshift(after - before);
+            if (this.last_emit_times.length > this.num_emit_times) {
+                this.last_emit_times.pop();
             }
-            return;
-        }
 
-        //读到数据了
-        this.played = false;
-        this.empties_written = 0;
+            // libquiet notifies us that the payload is finished by
+            // returning written < number of samples we asked for
+            if (written === -1) {
+                if (this.empties_written < 1) {
+                    // 没读到数据，但仍坚持播放3帧静音
+                    // flush out browser's sound sample buffer before quitting
+                    this.samplesToPlay.push(this.emptySample)
+                    this.empties_written++;
+                }else{
+                    // looks like we are done
+                    // user callback
+                    if (this.done !== undefined) {
+                        this.done();
+                    }
+                    if (this.running) {
+                        this.stopTransmitter();
+                    }
+                    break;
+                }
+            }else{
+                this.empties_written = 0;
 
-        // in this case, we are sending data, but the whole block isn't full (we're near the end)
-        if (written < this.quiet.sampleBufferSize) {
-            // be extra cautious and 0-fill what's left
-            //   (we want the end of transmission to be silence, not potentially loud noise)
-            for (let i = written; i < this.quiet.sampleBufferSize; i++) {
-                this.sample_view[i] = 0;
+                const samples = new Float32Array(this.sample_view)
+                // in this case, we are sending data, but the whole block isn't full (we're near the end)
+                if (written < this.quiet.sampleBufferSize) {
+                    // be extra cautious and 0-fill what's left
+                    //   (we want the end of transmission to be silence, not potentially loud noise)
+                    for (let i = written; i < this.quiet.sampleBufferSize; i++) {
+                        samples[i] = 0;
+                    }
+                }
+                this.samplesToPlay.push(samples)
             }
         }
     }

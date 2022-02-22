@@ -4,11 +4,16 @@
     <script src="../dist/Quiet.js"></script>
 </head>
 <body>
+<select id="profile"></select>
 <button id="startSenderBtn" onclick="startSender()">startSender</button>
-<br/><br/>
+<br/>
+<br/>
 <input type="text" id="textToSend" value="abc"><button id="sendTextBtn" onclick="sendText()">sendText</button>
 <br/>
 <audio id="audioElem" controls autoplay></audio>
+<br/><br/><br/>
+<ol id="recordList"></ol>
+
 <script src="profiles.js"></script>
 <script src="sendText.js"></script>
 </body>

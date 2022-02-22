@@ -1,5 +1,6 @@
 import { QuietProfile, TransmitterOptions } from "./interfaces";
-export declare class Transmitter {
+import { EventEmitter } from "eventemitter3";
+export declare class Transmitter extends EventEmitter {
     profileObj: QuietProfile;
     done: () => void;
     clampFrame: boolean;
@@ -10,8 +11,9 @@ export declare class Transmitter {
     private quiet;
     running: boolean;
     inited: boolean;
-    private played;
     private sample_view;
+    private samplesToPlay;
+    private emptySample;
     private payload;
     private opts;
     private samples;
@@ -23,9 +25,13 @@ export declare class Transmitter {
     private dummy_osc;
     private frame_len;
     private stream;
+    private playing;
+    private paused;
     constructor(opts: TransmitterOptions);
-    transmit(buf: ArrayBuffer): void;
-    transmitText(text: string): void;
+    pause(): void;
+    resume(): void;
+    transmit(buf: ArrayBuffer): Promise<void>;
+    transmitText(text: string): Promise<void>;
     startTransmitter(): void;
     writebuf(): void;
     readBuf(): void;

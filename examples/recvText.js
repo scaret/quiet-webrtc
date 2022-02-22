@@ -1,3 +1,14 @@
+const main = async ()=>{
+    let profileNames = Object.keys(profiles)
+    profileNames.forEach((profileName)=>{
+        const option = document.createElement("option")
+        option.value = profileName;
+        option.innerText = profileName;
+        document.getElementById("profile").appendChild(option)
+    })
+}
+main()
+
 const startReceiver = async ()=>{
     const quiet = new Quiet.Quiet()
     await quiet.init({
@@ -16,15 +27,13 @@ const startReceiver = async ()=>{
     window.audioTrack = audioTrack
     console.log(audioTrack.getSettings())
     const textDecoder = new TextDecoder()
-    Object.keys(profiles).forEach(async (profileName)=>{
-        const receiverOptions = {
-            audioStreams: [audioStream],
-            profileName: profileName,
-            onReceive: function(arrayBuffer){
-                console.log("onReceive", profileName, textDecoder.decode(arrayBuffer))
-            }
+    const receiverOptions = {
+        audioStreams: [audioStream],
+        profileName: document.getElementById("profile").value,
+        onReceive: function(arrayBuffer){
+            console.log("onReceive", textDecoder.decode(arrayBuffer))
         }
-        const receiver =  await quiet.receiver(receiverOptions)
-        console.log("receiver", profileName, receiver);
-    })
+    }
+    const receiver =  await quiet.receiver(receiverOptions)
+    console.log("receiver", receiver);
 }
